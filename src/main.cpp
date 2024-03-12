@@ -3,13 +3,12 @@
 #include <ios>
 #include <iostream>
 int main() {
-  Image image("./input/layer1.tga");
-  Image image2("./input/text.tga");
+  Image image("./input/car.tga");
+  Image image2("./input/layer2.tga");
 
-  image.loadImage();
-  image2.loadImage();
+  Image output = image.Subtract(image2);
 
-  image.Screen(image2, "./output/Part2.tga");
+  output.outputImage("./output/testingSubtract.tga");
 
   return 0;
 }

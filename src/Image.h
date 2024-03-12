@@ -11,22 +11,32 @@ private:
   std::vector<std::vector<Pixel>> imageVec;
   std::fstream imageStream;
 
+  // Helper functions
+  void readHeader();
+  void writeHeader();
+  void writeImageVector();
+  void readImageVector();
+  void readPixel(Pixel &newPixel);
+  void writePixel(Pixel &pixel);
+  void loadImage();
+  NormalizedPixel normalizePixel(Pixel &pixel);
+  Pixel pixelize(NormalizedPixel &normalPixel);
+  int clamp(int value);
+
 public:
   Image();
   Image(std::string _imagePath);
-
-  void loadImage();
-  void loadImage(std::string _imagePath);
-  void loadHeader();
   void printHeader();
-  void writeImage(std::string fileName);
-  Image getImage();
+  void outputImage();
+  void outputImage(std::string fileName);
+  void importHeader(const Header &newHeader);
+  void importImageVector(const std::vector<std::vector<Pixel>> &newImageVec);
 
   // Operations
 
-  void Multiply(Image &layer2, std::string outputName);
-  void Screen(Image &layer2, std::string outputName);
-  void Subtract(Image &layer2, std::string outputName);
-  void Addition(Image &layer2, std::string outputName);
-  void Overlay(Image &layer2, std::string outputName);
+  Image Multiply(Image &layer2);
+  Image Screen(Image &layer2);
+  Image Subtract(Image &layer2);
+  Image Addition(Image &layer2);
+  Image Overlay(Image &layer2);
 };
