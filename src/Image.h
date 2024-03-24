@@ -22,6 +22,7 @@ private:
   NormalizedPixel normalizePixel(Pixel &pixel);
   Pixel pixelize(NormalizedPixel &normalPixel);
   int clamp(int value);
+  float overlayConditional(float p1, float p2);
 
 public:
   Image();
@@ -39,4 +40,11 @@ public:
   Image Subtract(Image &layer2);
   Image Addition(Image &layer2);
   Image Overlay(Image &layer2);
+  Image ChangeChannel(int amount,
+                      int channel); // 0 for blue, 1 for green, 2 for red
+  Image SubChannel(int amount, int channel);
+  Image MultChannel(int amount, int channel);
+  Image ExtractChannel(int channel);
+  Image IsolateChannel(int channel);
+  Image Rotate();
 };

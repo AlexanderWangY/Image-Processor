@@ -1,9 +1,11 @@
 #include "Image.h"
 #include "Pixel.h"
+#include <algorithm>
 #include <fstream>
 #include <ios>
 #include <iostream>
 #include <ostream>
+#include <pthread.h>
 #include <vector>
 
 Image::Image() { imagePath = ""; }; // Default contructor (nothing happens)
@@ -114,6 +116,42 @@ Image Image::Multiply(Image &layer2) {
   return outputImage;
 }
 
+Image Image::Screen(Image &layer2) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+
+  for (int x = 0; x < outputHeader.height; x++) {
+    std::vector<Pixel> newRow;
+    for (int y = 0; y < outputHeader.width; y++) {
+      NormalizedPixel normalPixel_1 = this->normalizePixel(imageVec[x][y]);
+      NormalizedPixel normalPixel_2 =
+          this->normalizePixel(layer2.imageVec[x][y]);
+
+      Pixel newPixel;
+      newPixel.blue = (unsigned char)((
+          int)((1.0 - (1.0 - normalPixel_1.blue) * (1.0 - normalPixel_2.blue)) *
+                   255.0 +
+               0.5f));
+      newPixel.green =
+          (unsigned char)((int)((1.0 - (1.0 - normalPixel_1.green) *
+                                           (1.0 - normalPixel_2.green)) *
+                                    255.0 +
+                                0.5f));
+      newPixel.red = (unsigned char)((
+          int)((1.0 - (1.0 - normalPixel_1.red) * (1.0 - normalPixel_2.red)) *
+                   255.0 +
+               0.5f));
+      newRow.push_back(newPixel);
+    }
+    outputImageVector.push_back(newRow);
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
 Image Image::Subtract(Image &layer2) {
   Image outputImage;
   Header outputHeader = header;
@@ -124,20 +162,338 @@ Image Image::Subtract(Image &layer2) {
     for (int y = 0; y < outputHeader.width; y++) {
       Pixel newPixel;
 
-      newPixel.blue =
-          (unsigned char)(this->clamp((int)this->imageVec[x][y].blue) -
-                          (int)layer2.imageVec[x][y].blue);
-      newPixel.green =
-          (unsigned char)(this->clamp((int)this->imageVec[x][y].green) -
-                          (int)layer2.imageVec[x][y].green);
-      newPixel.red =
-          (unsigned char)(this->clamp((int)this->imageVec[x][y].red) -
-                          (int)layer2.imageVec[x][y].red);
+      newPixel.blue = (unsigned char)(this->clamp(
+          (int)this->imageVec[x][y].blue - (int)layer2.imageVec[x][y].blue));
+      newPixel.green = (unsigned char)(this->clamp(
+          (int)this->imageVec[x][y].green - (int)layer2.imageVec[x][y].green));
+      newPixel.red = (unsigned char)(this->clamp(
+          (int)this->imageVec[x][y].red - (int)layer2.imageVec[x][y].red));
 
       newRow.push_back(newPixel);
     }
     outputImageVector.push_back(newRow);
   }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::Addition(Image &layer2) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+
+  for (int x = 0; x < outputHeader.height; x++) {
+    std::vector<Pixel> newRow;
+    for (int y = 0; y < outputHeader.width; y++) {
+      Pixel newPixel;
+
+      newPixel.blue = (unsigned char)(this->clamp(
+          (int)this->imageVec[x][y].blue + (int)layer2.imageVec[x][y].blue));
+      newPixel.green = (unsigned char)(this->clamp(
+          (int)this->imageVec[x][y].green + (int)layer2.imageVec[x][y].green));
+      newPixel.red = (unsigned char)(this->clamp(
+          (int)this->imageVec[x][y].red + (int)layer2.imageVec[x][y].red));
+
+      newRow.push_back(newPixel);
+    }
+    outputImageVector.push_back(newRow);
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::Overlay(Image &layer2) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+
+  for (int x = 0; x < outputHeader.height; x++) {
+    std::vector<Pixel> newRow;
+    for (int y = 0; y < outputHeader.width; y++) {
+      NormalizedPixel normalPixel_1 = this->normalizePixel(imageVec[x][y]);
+      NormalizedPixel normalPixel_2 =
+          this->normalizePixel(layer2.imageVec[x][y]);
+
+      Pixel newPixel;
+
+      newPixel.blue =
+          (unsigned char)((int)(this->overlayConditional(normalPixel_1.blue,
+                                                         normalPixel_2.blue) *
+                                    255 +
+                                0.5f));
+      newPixel.green =
+          (unsigned char)((int)(this->overlayConditional(normalPixel_1.green,
+                                                         normalPixel_2.green) *
+                                    255 +
+                                0.5f));
+      newPixel.red = (unsigned char)((
+          int)(this->overlayConditional(normalPixel_1.red, normalPixel_2.red) *
+                   255 +
+               0.5f));
+
+      newRow.push_back(newPixel);
+    }
+    outputImageVector.push_back(newRow);
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::ChangeChannel(int amount, int channel) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+  if (channel == 0) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue =
+            (unsigned char)(this->clamp((int)imageVec[x][y].blue + amount));
+        newPixel.green = imageVec[x][y].green;
+        newPixel.red = imageVec[x][y].red;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 1) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].blue;
+        newPixel.green =
+            (unsigned char)(this->clamp((int)imageVec[x][y].green + amount));
+        newPixel.red = imageVec[x][y].red;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 2) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].blue;
+        newPixel.green = imageVec[x][y].green;
+        newPixel.red =
+            (unsigned char)(this->clamp((int)imageVec[x][y].red + amount));
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else {
+    std::cout << "Invalid option selected!" << std::endl;
+    return outputImage;
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::MultChannel(int amount, int channel) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+  if (channel == 0) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue =
+            (unsigned char)(this->clamp((int)(imageVec[x][y].blue * amount)));
+        newPixel.green = imageVec[x][y].green;
+        newPixel.red = imageVec[x][y].red;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 1) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].blue;
+        newPixel.green =
+            (unsigned char)(this->clamp((int)(imageVec[x][y].green * amount)));
+        newPixel.red = imageVec[x][y].red;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 2) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].blue;
+        newPixel.green = imageVec[x][y].green;
+        newPixel.red =
+            (unsigned char)(this->clamp((int)(imageVec[x][y].red * amount)));
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else {
+    std::cout << "Invalid option selected!" << std::endl;
+    return outputImage;
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::ExtractChannel(int channel) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+  if (channel == 0) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].blue;
+        newPixel.green = imageVec[x][y].blue;
+        newPixel.red = imageVec[x][y].blue;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 1) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].green;
+        newPixel.green = imageVec[x][y].green;
+        newPixel.red = imageVec[x][y].green;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 2) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].red;
+        newPixel.green = imageVec[x][y].red;
+        newPixel.red = imageVec[x][y].red;
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else {
+    std::cout << "Invalid option selected!" << std::endl;
+    return outputImage;
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::IsolateChannel(int channel) {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+  if (channel == 0) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = imageVec[x][y].blue;
+        newPixel.green = 0;
+        newPixel.red = 0;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 1) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = 0;
+        newPixel.green = imageVec[x][y].green;
+        newPixel.red = 0;
+
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else if (channel == 2) {
+    for (int x = 0; x < outputHeader.height; x++) {
+      std::vector<Pixel> newRow;
+      for (int y = 0; y < outputHeader.width; y++) {
+        Pixel newPixel;
+        newPixel.blue = 0;
+        newPixel.green = 0;
+        newPixel.red = imageVec[x][y].red;
+        newRow.push_back(newPixel);
+      }
+
+      outputImageVector.push_back(newRow);
+    }
+  } else {
+    std::cout << "Invalid option selected!" << std::endl;
+    return outputImage;
+  }
+
+  outputImage.importHeader(outputHeader);
+  outputImage.importImageVector(outputImageVector);
+  return outputImage;
+}
+
+Image Image::Rotate() {
+  Image outputImage;
+  Header outputHeader = header;
+  std::vector<std::vector<Pixel>> outputImageVector;
+
+  for (int x = 0; x < outputHeader.height; x++) {
+    std::vector<Pixel> newRow;
+    for (int y = 0; y < outputHeader.width; y++) {
+      Pixel newPixel;
+      newPixel.blue = imageVec[x][y].blue;
+      newPixel.green = imageVec[x][y].green;
+      newPixel.red = imageVec[x][y].red;
+      newRow.push_back(newPixel);
+    }
+
+    std::reverse(newRow.begin(), newRow.end());
+
+    outputImageVector.push_back(newRow);
+  }
+
+  std::reverse(outputImageVector.begin(), outputImageVector.end());
 
   outputImage.importHeader(outputHeader);
   outputImage.importImageVector(outputImageVector);
@@ -260,5 +616,13 @@ int Image::clamp(int value) {
     return 255;
   } else {
     return value;
+  }
+}
+
+float Image::overlayConditional(float p1, float p2) {
+  if (p2 <= 0.5) {
+    return 2 * p1 * p2;
+  } else {
+    return 1 - (2 * (1 - p1) * (1 - p2));
   }
 }
