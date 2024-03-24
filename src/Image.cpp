@@ -6,6 +6,7 @@
 #include <iostream>
 #include <ostream>
 #include <pthread.h>
+#include <string>
 #include <vector>
 
 Image::Image() { imagePath = ""; }; // Default contructor (nothing happens)
@@ -28,6 +29,9 @@ Image::Image(std::string _imagePath) {
     std::cout << "File not found, saving filename..." << std::endl;
   }
 }
+
+void Image::setImagePath(std::string _imagePath) { imagePath = _imagePath; }
+std::string Image::getImagePath() { return imagePath; }
 
 void Image::outputImage() {
   std::cout << "Outputting image: " << imagePath << std::endl;
@@ -80,6 +84,12 @@ void Image::printHeader() {
             << "\nBitsPerPixel: " << static_cast<int>(header.bitsPerPixel)
             << "\nImageDescriptor: " << static_cast<int>(header.imageDescriptor)
             << std::endl;
+}
+
+Header Image::outputHeader() { return this->header; }
+
+std::vector<std::vector<Pixel>> Image::outputImageVector() {
+  return this->imageVec;
 }
 
 // Operation functions!
@@ -586,8 +596,14 @@ void Image::writePixel(Pixel &pixel) {
 }
 
 void Image::loadImage() {
+  if (imageStream.is_open()) {
+    imageStream.close();
+  }
+
+  imageStream.open(imagePath, std::ios::binary | std::ios::in | std::ios::out);
   this->readHeader();
   this->readImageVector();
+  imageStream.close();
 }
 
 NormalizedPixel Image::normalizePixel(Pixel &pixel) {

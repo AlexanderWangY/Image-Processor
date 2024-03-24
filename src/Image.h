@@ -18,7 +18,6 @@ private:
   void readImageVector();
   void readPixel(Pixel &newPixel);
   void writePixel(Pixel &pixel);
-  void loadImage();
   NormalizedPixel normalizePixel(Pixel &pixel);
   Pixel pixelize(NormalizedPixel &normalPixel);
   int clamp(int value);
@@ -27,11 +26,16 @@ private:
 public:
   Image();
   Image(std::string _imagePath);
+  void setImagePath(std::string _imagePath);
+  std::string getImagePath();
+  void loadImage();
   void printHeader();
   void outputImage();
   void outputImage(std::string fileName);
   void importHeader(const Header &newHeader);
   void importImageVector(const std::vector<std::vector<Pixel>> &newImageVec);
+  Header outputHeader();
+  std::vector<std::vector<Pixel>> outputImageVector();
 
   // Operations
 
