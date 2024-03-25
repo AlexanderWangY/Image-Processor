@@ -21,12 +21,10 @@ Image::Image(std::string _imagePath) {
   imageStream.open(imagePath, std::ios::binary | std::ios::in | std::ios::out);
 
   if (imageStream.is_open()) {
-    std::cout << "File found! Loading image..." << std::endl;
     this->loadImage();
     imageStream.close();
   } else {
     imageStream.close();
-    std::cout << "File not found, saving filename..." << std::endl;
   }
 }
 
@@ -34,7 +32,6 @@ void Image::setImagePath(std::string _imagePath) { imagePath = _imagePath; }
 std::string Image::getImagePath() { return imagePath; }
 
 void Image::outputImage() {
-  std::cout << "Outputting image: " << imagePath << std::endl;
 
   if (imageStream.is_open()) {
     imageStream.close();
@@ -49,7 +46,6 @@ void Image::outputImage() {
 }
 
 void Image::outputImage(std::string fileName) {
-  std::cout << "Outputting image: " << fileName << std::endl;
 
   if (imageStream.is_open()) {
     imageStream.close();
@@ -94,14 +90,12 @@ std::vector<std::vector<Pixel>> Image::outputImageVector() {
 
 // Operation functions!
 
-Image Image::Multiply(Image &layer2) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::Multiply(Image &layer2) {
   std::vector<std::vector<Pixel>> outputImageVector;
 
-  for (int x = 0; x < outputHeader.height; x++) {
+  for (int x = 0; x < header.height; x++) {
     std::vector<Pixel> newRow;
-    for (int y = 0; y < outputHeader.width; y++) {
+    for (int y = 0; y < header.width; y++) {
       NormalizedPixel newNormalPixel_L1 =
           this->normalizePixel(this->imageVec[x][y]);
       NormalizedPixel newNormalPixel_L2 =
@@ -120,20 +114,15 @@ Image Image::Multiply(Image &layer2) {
     outputImageVector.push_back(newRow);
   }
 
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::Screen(Image &layer2) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::Screen(Image &layer2) {
   std::vector<std::vector<Pixel>> outputImageVector;
 
-  for (int x = 0; x < outputHeader.height; x++) {
+  for (int x = 0; x < header.height; x++) {
     std::vector<Pixel> newRow;
-    for (int y = 0; y < outputHeader.width; y++) {
+    for (int y = 0; y < header.width; y++) {
       NormalizedPixel normalPixel_1 = this->normalizePixel(imageVec[x][y]);
       NormalizedPixel normalPixel_2 =
           this->normalizePixel(layer2.imageVec[x][y]);
@@ -157,19 +146,15 @@ Image Image::Screen(Image &layer2) {
     outputImageVector.push_back(newRow);
   }
 
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::Subtract(Image &layer2) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::Subtract(Image &layer2) {
   std::vector<std::vector<Pixel>> outputImageVector;
 
-  for (int x = 0; x < outputHeader.height; x++) {
+  for (int x = 0; x < header.height; x++) {
     std::vector<Pixel> newRow;
-    for (int y = 0; y < outputHeader.width; y++) {
+    for (int y = 0; y < header.width; y++) {
       Pixel newPixel;
 
       newPixel.blue = (unsigned char)(this->clamp(
@@ -183,20 +168,15 @@ Image Image::Subtract(Image &layer2) {
     }
     outputImageVector.push_back(newRow);
   }
-
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::Addition(Image &layer2) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::Addition(Image &layer2) {
   std::vector<std::vector<Pixel>> outputImageVector;
 
-  for (int x = 0; x < outputHeader.height; x++) {
+  for (int x = 0; x < header.height; x++) {
     std::vector<Pixel> newRow;
-    for (int y = 0; y < outputHeader.width; y++) {
+    for (int y = 0; y < header.width; y++) {
       Pixel newPixel;
 
       newPixel.blue = (unsigned char)(this->clamp(
@@ -210,20 +190,15 @@ Image Image::Addition(Image &layer2) {
     }
     outputImageVector.push_back(newRow);
   }
-
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::Overlay(Image &layer2) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::Overlay(Image &layer2) {
   std::vector<std::vector<Pixel>> outputImageVector;
 
-  for (int x = 0; x < outputHeader.height; x++) {
+  for (int x = 0; x < header.height; x++) {
     std::vector<Pixel> newRow;
-    for (int y = 0; y < outputHeader.width; y++) {
+    for (int y = 0; y < header.width; y++) {
       NormalizedPixel normalPixel_1 = this->normalizePixel(imageVec[x][y]);
       NormalizedPixel normalPixel_2 =
           this->normalizePixel(layer2.imageVec[x][y]);
@@ -249,20 +224,15 @@ Image Image::Overlay(Image &layer2) {
     }
     outputImageVector.push_back(newRow);
   }
-
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::ChangeChannel(int amount, int channel) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::ChangeChannel(int amount, int channel) {
   std::vector<std::vector<Pixel>> outputImageVector;
   if (channel == 0) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue =
             (unsigned char)(this->clamp((int)imageVec[x][y].blue + amount));
@@ -275,9 +245,9 @@ Image Image::ChangeChannel(int amount, int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 1) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].blue;
         newPixel.green =
@@ -290,9 +260,9 @@ Image Image::ChangeChannel(int amount, int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 2) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].blue;
         newPixel.green = imageVec[x][y].green;
@@ -306,22 +276,17 @@ Image Image::ChangeChannel(int amount, int channel) {
     }
   } else {
     std::cout << "Invalid option selected!" << std::endl;
-    return outputImage;
   }
 
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::MultChannel(int amount, int channel) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::MultChannel(int amount, int channel) {
   std::vector<std::vector<Pixel>> outputImageVector;
   if (channel == 0) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue =
             (unsigned char)(this->clamp((int)(imageVec[x][y].blue * amount)));
@@ -334,9 +299,9 @@ Image Image::MultChannel(int amount, int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 1) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].blue;
         newPixel.green =
@@ -349,9 +314,9 @@ Image Image::MultChannel(int amount, int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 2) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].blue;
         newPixel.green = imageVec[x][y].green;
@@ -365,22 +330,16 @@ Image Image::MultChannel(int amount, int channel) {
     }
   } else {
     std::cout << "Invalid option selected!" << std::endl;
-    return outputImage;
   }
-
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::ExtractChannel(int channel) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::ExtractChannel(int channel) {
   std::vector<std::vector<Pixel>> outputImageVector;
   if (channel == 0) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].blue;
         newPixel.green = imageVec[x][y].blue;
@@ -392,9 +351,9 @@ Image Image::ExtractChannel(int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 1) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].green;
         newPixel.green = imageVec[x][y].green;
@@ -406,9 +365,9 @@ Image Image::ExtractChannel(int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 2) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].red;
         newPixel.green = imageVec[x][y].red;
@@ -420,22 +379,17 @@ Image Image::ExtractChannel(int channel) {
     }
   } else {
     std::cout << "Invalid option selected!" << std::endl;
-    return outputImage;
   }
 
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::IsolateChannel(int channel) {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::IsolateChannel(int channel) {
   std::vector<std::vector<Pixel>> outputImageVector;
   if (channel == 0) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = imageVec[x][y].blue;
         newPixel.green = 0;
@@ -447,9 +401,9 @@ Image Image::IsolateChannel(int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 1) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = 0;
         newPixel.green = imageVec[x][y].green;
@@ -461,9 +415,9 @@ Image Image::IsolateChannel(int channel) {
       outputImageVector.push_back(newRow);
     }
   } else if (channel == 2) {
-    for (int x = 0; x < outputHeader.height; x++) {
+    for (int x = 0; x < header.height; x++) {
       std::vector<Pixel> newRow;
-      for (int y = 0; y < outputHeader.width; y++) {
+      for (int y = 0; y < header.width; y++) {
         Pixel newPixel;
         newPixel.blue = 0;
         newPixel.green = 0;
@@ -475,22 +429,17 @@ Image Image::IsolateChannel(int channel) {
     }
   } else {
     std::cout << "Invalid option selected!" << std::endl;
-    return outputImage;
   }
 
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
-Image Image::Rotate() {
-  Image outputImage;
-  Header outputHeader = header;
+void Image::Rotate() {
   std::vector<std::vector<Pixel>> outputImageVector;
 
-  for (int x = 0; x < outputHeader.height; x++) {
+  for (int x = 0; x < header.height; x++) {
     std::vector<Pixel> newRow;
-    for (int y = 0; y < outputHeader.width; y++) {
+    for (int y = 0; y < header.width; y++) {
       Pixel newPixel;
       newPixel.blue = imageVec[x][y].blue;
       newPixel.green = imageVec[x][y].green;
@@ -505,9 +454,7 @@ Image Image::Rotate() {
 
   std::reverse(outputImageVector.begin(), outputImageVector.end());
 
-  outputImage.importHeader(outputHeader);
-  outputImage.importImageVector(outputImageVector);
-  return outputImage;
+  this->imageVec = outputImageVector;
 }
 
 // Helper function declarations
@@ -599,6 +546,10 @@ void Image::loadImage() {
   if (imageStream.is_open()) {
     imageStream.close();
   }
+
+  this->imageVec.clear();
+  Header emptyheader;
+  this->header = emptyheader;
 
   imageStream.open(imagePath, std::ios::binary | std::ios::in | std::ios::out);
   this->readHeader();

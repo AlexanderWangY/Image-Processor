@@ -39,16 +39,16 @@ public:
 
   // Operations
 
-  Image Multiply(Image &layer2);
-  Image Screen(Image &layer2);
-  Image Subtract(Image &layer2);
-  Image Addition(Image &layer2);
-  Image Overlay(Image &layer2);
-  Image ChangeChannel(int amount,
-                      int channel); // 0 for blue, 1 for green, 2 for red
-  Image SubChannel(int amount, int channel);
-  Image MultChannel(int amount, int channel);
-  Image ExtractChannel(int channel);
-  Image IsolateChannel(int channel);
-  Image Rotate();
+  void Multiply(Image &layer2);
+  void Screen(Image &layer2);
+  void Subtract(Image &layer2);
+  void Addition(Image &layer2);
+  void Overlay(Image &layer2);
+  void ChangeChannel(int amount,
+                     int channel); // 0 for blue, 1 for green, 2 for red
+  void SubChannel(int amount, int channel);
+  void MultChannel(int amount, int channel);
+  void ExtractChannel(int channel);
+  void IsolateChannel(int channel);
+  void Rotate();
 };

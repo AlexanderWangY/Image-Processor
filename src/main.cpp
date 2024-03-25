@@ -1,24 +1,27 @@
 #include "Image.h"
 #include "Pixel.h"
 #include "TempImage.h"
+#include <cstdio>
 #include <fstream>
 #include <ios>
 #include <iostream>
+#include <iterator>
 #include <ostream>
 #include <queue>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-Image createImage(TempImage tempimage) {
-  Image temp;
-  temp.importImageVector(tempimage.imgVec);
-  temp.importHeader(tempimage.header);
-  return temp;
-}
+using std::cout;
+using std::endl;
+
+bool validFile(std::string filename);
+bool validOutputFile(std::string filename);
+bool isFileMode(const std::string &filename);
+bool isNumberMode(const std::string &filename);
+bool isNoneMode(const std::string &filename);
 
 int main(int argc, char *argv[]) {
-  std::cout << "There are " << argc << " arguements entered\n";
 
   // No args response
   if (argc <= 1) {
@@ -29,183 +32,254 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  std::vector<std::string> CLIargs;
-  std::string outputPath = "";
-  Image baseLayer;
+  // Loading up all arguments into a vector
 
-  for (int x = 1; x < argc; x++) {
-    std::string newArg = argv[x];
+  std::vector<std::string> CLIargs;
+
+  for (int i = 1; i < argc; i++) {
+    std::string newArg = argv[i];
     CLIargs.push_back(newArg);
   }
 
-  if (CLIargs[0] == "--help" && CLIargs.size() == 1) {
-    std::cout << "Project 2: Image Processing, Spring "
-                 "2024\n\nUsage:\n\t./project2.out [output] [firstImage] "
-                 "[method] [...]"
-              << std::endl;
-    return 0;
-  } else if (CLIargs[0] == "--help" && CLIargs.size() != 1) {
-    std::cout << "Extra arguemnts for help!" << std::endl;
-  }
+  // Checking for --help flag
 
-  if (CLIargs.size() == 1) {
-    std::cout << "Invalid file name." << std::endl;
-    return 0;
-  } else {
-    outputPath = CLIargs[0];
-  }
-
-  std::cout << "Loading image from " << CLIargs[1] << std::endl;
-
-  baseLayer.setImagePath(CLIargs[1]);
-  baseLayer.loadImage();
-
-  std::string currentFunction = "";
-  int num_factor = 0;
-  Image nextLayer;
-  Image nextnextLayer;
-
-  TempImage tempimage;
-  tempimage.header = baseLayer.outputHeader();
-  tempimage.imgVec = baseLayer.outputImageVector();
-
-  for (int i = 2; i < CLIargs.size(); i++) {
-    if (currentFunction == "") {
-      if (CLIargs[i] == "flip") {
-        Image temp = createImage(tempimage);
-        Image result = temp.Rotate();
-        tempimage.header = result.outputHeader();
-        tempimage.imgVec = result.outputImageVector();
-      } else {
-        currentFunction = CLIargs[i];
-      }
+  if (CLIargs[0] == "--help") {
+    if (CLIargs.size() == 1) {
+      cout << "Project 2: Image Processing, Spring "
+              "2024\n\nUsage:\n\t./project2.out [output] [firstImage] "
+              "[method] [...]"
+           << endl;
     } else {
-      if (currentFunction == "addred" || currentFunction == "addgreen" ||
-          currentFunction == "addblue" || currentFunction == "scalered" ||
-          currentFunction == "scalegreen" || currentFunction == "scaleblue") {
+      cout << "Extra arguments after --help" << endl;
+    }
+    return 0;
+  }
 
-        try {
-          num_factor = std::stoi(CLIargs[i]);
+  std::string outputFilename = CLIargs[0];
 
-        } catch (std::invalid_argument) {
-          std::cout << "Please use a number when using scale or add!"
-                    << std::endl;
+  // Test if output file is valid
+  if (!validOutputFile(outputFilename)) { // NOT
+    return 0;
+  }
+
+  // Test size of CLIargs to see if there is anythiing after output file
+
+  if (CLIargs.size() <= 1) {
+    cout << "No tracking file specified" << endl;
+    return 0;
+  }
+
+  // POSSIBLY CHECK IF THERE IS AN ARGUMENT AFTER OUTPUT FILE?
+
+  // Check if base image is valid
+  std::string trackingFilename = CLIargs[1];
+
+  if (!validFile(trackingFilename)) {
+    return 0;
+  }
+
+  Image trackingImage(trackingFilename);
+
+  // Variables for loop
+  int stage = 0;               // 0 - func, 1 - file, 2 -number
+  std::string fileLoaded = ""; // For combine function
+  std::string loadedFunction = "";
+
+  for (int x = 2; x < CLIargs.size(); x++) {
+
+    // Stage 0 - Finding function
+
+    if (stage == 0) {
+      if (isFileMode(CLIargs[x])) {
+        stage = 1;
+        loadedFunction = CLIargs[x];
+      } else if (isNumberMode(CLIargs[x])) {
+        stage = 2;
+        loadedFunction = CLIargs[x];
+      } else if (isNoneMode(CLIargs[x])) {
+        loadedFunction = CLIargs[x];
+        if (loadedFunction == "flip") {
+          cout << "... Flipping ..." << endl;
+          trackingImage.Rotate();
+          loadedFunction = "";
+          stage = 0;
+        } else if (loadedFunction == "onlyred") {
+          trackingImage.ExtractChannel(2);
+          loadedFunction = "";
+          stage = 0;
+        } else if (loadedFunction == "onlygreen") {
+          trackingImage.ExtractChannel(1);
+          loadedFunction = "";
+          stage = 0;
+        } else if (loadedFunction == "onlyblue") {
+          trackingImage.ExtractChannel(0);
+          loadedFunction = "";
+          stage = 0;
+        } else {
+          cout << "Something wrong with non type method" << endl;
           return 0;
         }
       } else {
-
-        if (currentFunction == "combine" && nextLayer.getImagePath() == "") {
-          nextLayer.setImagePath(CLIargs[i]);
-          nextLayer.loadImage();
-          continue;
-        } else if (currentFunction == "combine" &&
-                   nextnextLayer.getImagePath() != "") {
-          nextnextLayer.setImagePath(CLIargs[i]);
-          nextnextLayer.loadImage();
-        } else {
-          nextLayer.setImagePath(CLIargs[i]);
-          nextLayer.loadImage();
-        }
-
-        if (currentFunction == "multiply") {
-          std::cout << "Multiplying..." << std::endl;
-          Image result = createImage(tempimage).Multiply(nextLayer);
-          tempimage.header = result.outputHeader();
-          tempimage.imgVec = result.outputImageVector();
-        } else if (currentFunction == "subtract") {
-          std::cout << "Subtracting..." << std::endl;
-          Image result = createImage(tempimage).Subtract(nextLayer);
-          tempimage.header = result.outputHeader();
-          tempimage.imgVec = result.outputImageVector();
-        } else if (currentFunction == "overlay") {
-          std::cout << "Overlaying..." << std::endl;
-          Image result = createImage(tempimage).Overlay(nextLayer);
-          tempimage.header = result.outputHeader();
-          tempimage.imgVec = result.outputImageVector();
-        } else if (currentFunction == "screen") {
-          std::cout << "Screening..." << std::endl;
-          Image result = createImage(tempimage).Screen(nextLayer);
-          tempimage.header = result.outputHeader();
-          tempimage.imgVec = result.outputImageVector();
-        } else if (currentFunction == "combine") {
-          Image result =
-              createImage(tempimage).Addition(nextLayer).Addition(nextLayer);
-          tempimage.header = result.outputHeader();
-          tempimage.imgVec = result.outputImageVector();
-        }
-        currentFunction = "";
+        cout << "Invalid method name." << endl;
+        return 0;
       }
+    } else if (stage == 1) { // Stage 1 Implementation (File based)
+      // Check if file is valid
+      if (!validFile(CLIargs[x])) {
+        return 0;
+      }
+
+      Image layer2(CLIargs[x]);
+
+      if (loadedFunction == "multiply") {
+        trackingImage.Multiply(layer2);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "subtract") {
+        trackingImage.Subtract(layer2);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "overlay") {
+        trackingImage.Overlay(layer2);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "screen") {
+        trackingImage.Screen(layer2);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "combine") {
+
+        // Check if this is the second file
+        if (fileLoaded == "") {
+          fileLoaded = CLIargs[x];
+        } else {
+          Image layer3(fileLoaded);
+          trackingImage.IsolateChannel(2);
+          layer2.IsolateChannel(0);
+          layer3.IsolateChannel(1);
+          trackingImage.Addition(layer2);
+          trackingImage.Addition(layer3);
+          fileLoaded = "";
+          loadedFunction = "";
+          stage = 0;
+        }
+        // -------------------
+      }
+    } else if (stage == 2) {
+
+      int value;
+      // Attempt to convert to number
+
+      try {
+        value = std::stoi(CLIargs[x]);
+      } catch (std::invalid_argument) {
+        cout << "Invalid argument, expected number." << endl;
+        return 0;
+      }
+
+      if (loadedFunction == "addred") {
+        trackingImage.ChangeChannel(value, 2);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "addgreen") {
+        trackingImage.ChangeChannel(value, 1);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "addblue") {
+        trackingImage.ChangeChannel(value, 0);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "scalered") {
+        trackingImage.MultChannel(value, 2);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "scalegreen") {
+        trackingImage.MultChannel(value, 1);
+        loadedFunction = "";
+        stage = 0;
+      } else if (loadedFunction == "scaleblue") {
+        trackingImage.MultChannel(value, 0);
+        loadedFunction = "";
+        stage = 0;
+      } else {
+        cout << "There was an error with finding the correct method name"
+             << endl;
+        return 0;
+      }
+
+    } else {
+      cout << "Actually how" << endl;
+      return 0;
     }
-
-    Image outputImage;
-    outputImage.importImageVector(tempimage.imgVec);
-    outputImage.importHeader(tempimage.header);
-    outputImage.outputImage(outputPath);
-
-    // Image car("./input/car.tga");
-    // Image circles("./input/circles.tga");
-    // Image layer1("./input/layer1.tga");
-    // Image layer2("./input/layer2.tga");
-    // Image layer_blue("./input/layer_blue.tga");
-    // Image layer_green("./input/layer_green.tga");
-    // Image layer_red("./input/layer_red.tga");
-    // Image pattern1("./input/pattern1.tga");
-    // Image pattern2("./input/pattern2.tga");
-    // Image text("./input/text.tga");
-    // Image text2("./input/text2.tga");
-
-    // // Part 1
-    // Image part1 = layer1.Multiply(pattern1);
-    // part1.outputImage("./output/part1.tga");
-
-    // // Part 2
-    // Image part2 = car.Subtract(layer2);
-    // part2.outputImage("./output/part2.tga");
-
-    // // Part 3
-    // Image part3 = layer1.Multiply(pattern2).Screen(text);
-    // part3.outputImage("./output/part3.tga");
-
-    // // Part 4
-    // Image part4 = layer2.Multiply(circles).Subtract(pattern2);
-    // part4.outputImage("./output/part4.tga");
-
-    // // Part 5
-    // Image part5 = layer1.Overlay(pattern1);
-    // part5.outputImage("./output/part5.tga");
-
-    // // Part 6
-    // Image part6 = car.ChangeChannel(200, 1);
-    // part6.outputImage("./output/part6.tga");
-
-    // // Part 7
-    // Image part7 = car.MultChannel(4, 2).MultChannel(0, 0);
-    // part7.outputImage("./output/part7.tga");
-
-    // // Part 8 B
-    // Image part8_b = car.ExtractChannel(0);
-    // part8_b.outputImage("./output/part8_b.tga");
-
-    // // Part 8 G
-    // Image part8_g = car.ExtractChannel(1);
-    // part8_g.outputImage("./output/part8_g.tga");
-
-    // // Part 8 R
-    // Image part8_r = car.ExtractChannel(2);
-    // part8_r.outputImage("./output/part8_r.tga");
-
-    // // Part 9
-    // Image isolated_b = layer_blue.IsolateChannel(0);
-    // Image isolated_g = layer_green.IsolateChannel(1);
-    // Image isolated_r = layer_red.IsolateChannel(2);
-
-    // Image part9 = isolated_b.Addition(isolated_g).Addition(isolated_r);
-    // part9.outputImage("./output/part9.tga");
-
-    // // Part 10
-    // Image part10 = text2.Rotate();
-    // part10.outputImage("./output/part10.tga");
-
-    return 0;
   }
+
+  // Outputting image or throwing error
+
+  if (loadedFunction != "") {
+    cout << "Argument: " << loadedFunction << " is missing an argument" << endl;
+    cout << "Missing argument." << endl;
+  } else {
+    trackingImage.outputImage(outputFilename);
+  }
+
+  return 0;
+}
+
+// Some helper methods
+
+bool validOutputFile(std::string filename) {
+  size_t lastPOS = filename.find_last_of('.');
+  if (lastPOS == std::string::npos) {
+    cout << "Invalid file name." << endl;
+    return false;
+  } else if (filename.substr(lastPOS + 1) != "tga") {
+    cout << "Invalid file name." << endl;
+    return false;
+  }
+
+  std::fstream testStream(filename, std::ios::binary | std::ios::out);
+
+  if (testStream.is_open()) {
+    return true;
+  } else {
+    cout << "File does not exist" << endl;
+    return false;
+  }
+}
+
+bool validFile(std::string filename) {
+  size_t lastPOS = filename.find_last_of('.');
+  if (lastPOS == std::string::npos) {
+    cout << "Invalid file name." << endl;
+    return false;
+  } else if (filename.substr(lastPOS + 1) != "tga") {
+    cout << "Invalid file name." << endl;
+    return false;
+  }
+
+  std::ifstream testStream(filename, std::ios::binary);
+
+  if (testStream.is_open()) {
+    return true;
+  } else {
+    cout << "Invalid argument, file does not exist." << endl;
+    return false;
+  }
+}
+
+bool isFileMode(const std::string &function) {
+  return function == "multiply" || function == "subtract" ||
+         function == "overlay" || function == "screen" || function == "combine";
+}
+
+bool isNumberMode(const std::string &function) {
+
+  return function == "addred" || function == "addgreen" ||
+         function == "addblue" || function == "scalered" ||
+         function == "scalegreen" || function == "scaleblue";
+}
+
+bool isNoneMode(const std::string &function) {
+  return function == "flip" || function == "onlyred" ||
+         function == "onlygreen" || function == "onlyblue";
 }
